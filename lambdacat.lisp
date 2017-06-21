@@ -59,9 +59,11 @@
 ;;; For example, here is a definition of the REVERSE function which utilizes RLET
 ;;;
 ;;;     (defun reverse (ls)
-;;;       (rlet rec ((ls ls) (result nil))
+;;;       (rlet rec ((result nil)
+;;;                  (ls ls))
 ;;;         (if ls
-;;;             (rec (cdr ls) (cons (car ls) result))
+;;;             (rec (cons (car ls) result)
+;;;                  (cdr ls))
 ;;;             result)))
 (defmacro rlet (fn-name bind* &body body)
   (let ((arg* (mapcar (lambda (bind)
