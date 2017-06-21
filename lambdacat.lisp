@@ -123,3 +123,19 @@
 
 ;;; ----------------------------------------------------------------------
 
+;;; INDEXED-MAP is like mapcar, except that it passes the zero-based index of
+;;; the list element as a second argument to FN.
+;;;
+;;; For example, the expression
+;;;
+;;;     (indexed-map #'cons '(a b c d e f))
+;;;
+;;; yields the value
+;;;
+;;;     ((a . 0) (b . 1) (c . 2) (d . 3) (e . 4) (f . 5))
+(defun indexed-map (fn ls)
+  (let ((n 0))
+    (mapcar (lambda (x)
+	      (prog1 (funcall fn x n)
+		(incf n)))
+	    ls)))
