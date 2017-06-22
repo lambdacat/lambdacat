@@ -5,5 +5,12 @@
   (:export #:rlambda
 	   #:rlet
 	   #:once-only
-	   #:with-gensyms))
+	   #:with-gensyms
+	   #:range
+	   #:collect-range
+	   #:indexed-map
+	   #:atom*->symbol
+	   #:take
+	   #:drop
+	   #:group))
 

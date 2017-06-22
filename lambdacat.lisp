@@ -134,10 +134,55 @@
 ;;;
 ;;; yields the value
 ;;;
-;;;     ((a . 0) (b . 1) (c . 2) (d . 3) (e . 4) (f . 5))
+;;;     ((A . 0) (B . 1) (C . 2) (D . 3) (E . 4) (F . 5))
 (defun indexed-map (fn ls)
   (let ((n 0))
     (mapcar (lambda (x)
 	      (prog1 (funcall fn x n)
 		(incf n)))
 	    ls)))
+
+;;; ----------------------------------------------------------------------
+
+;;; Concatenate the printed representation of each atom in ATOM* into a
+;;; a string, and intern it as a symbol.
+(defun atom*->symbol (&rest atom*)
+  (values
+   (intern
+    (apply #'concatenate 'string (mapcar (lambda (atom)
+					   (format nil "~A" atom))
+					 atom*)))))
+
+;;; ----------------------------------------------------------------------
+
+;;; Return the first N elements of LS as a list.
+;;;
+;;;   (take 3 '(1 2 3 4 5 6 7 8)) => (1 2 3)
+(defun take (n ls)
+  (if (and ls (> n 0))
+      (cons (car ls)
+	    (take (- n 1) (cdr ls)))
+      nil))
+
+;;; ----------------------------------------------------------------------
+
+;;; Return LS with the first N elements removed.
+;;;
+;;;   (drop 3 '(1 2 3 4 5 6 7 8)) => (4 5 6 7 8)
+;;;
+(defun drop (n ls)
+  (if (and ls (> n 0))
+      (drop (- n 1) (cdr ls))
+      ls))
+
+;;; ----------------------------------------------------------------------
+
+;;; Group LS into sub-lists of size N.
+;;;
+;;;    (group 3 '(1 2 3 4 5 6 7 8)) => ((1 2 3) (4 5 6) (7 8))
+;;;
+(defun group (n ls)
+  (if ls
+      (cons (take n ls)
+	    (group n (drop n ls)))
+      nil))
