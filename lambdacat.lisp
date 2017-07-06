@@ -4,36 +4,25 @@
 
 ;;; "lambdacat" goes here. Hacks and glory await!
 
-;;; This is a macro-yielding macro. It ensures that each variable in VAR* is only
-;;; evaluated once in the expansion of the final macro.
 (defmacro once-only (var* &body body)
-  ;; VAR/GENSYM* is a list of variable/gensym pairs, where each gensym is the name
-  ;; given to the corresponding variable in the final expanded macro.
-  (let ((var/gensym* (mapcar (lambda (var)
-			       (cons var
-				     (gensym (symbol-name var))))
-			     var*)))
-    ;; The nested backticks are evaluated in the expansion of the final macro.
-    ;; This assigns the evaluated contents of each var to the given gensym name,
-    ;; effectively creating a temporary variable (to avoid redundant evaluation).
-    ``(let ,(list ,@(mapcar (lambda (var/gensym)
-			      (let ((v (car var/gensym))
-				    (g (cdr var/gensym)))
-				``(,',g ,,v)))
-			    var/gensym*))
-	;; This let statement is evaluated in the intermediate macro (where once-only
-	;; is directly called). It shadows each variable (which previously evaluated
-	;; to some form in the macro arguments) with the corresponding gensym.
-	;;
-	;; So now, if X previously evaluated to (FOO BAR), it will evaluate to a gensym
-	;; which will have the value of (FOO BAR) assigned to it in the final macro (by
-	;; the above let statement).
-	,(let ,(mapcar (lambda (var/gensym)
-			 (let ((v (car var/gensym))
-			       (g (cdr var/gensym)))
-			   `(,v ',g)))
-		       var/gensym*)
-	   ,@body))))
+  (let ((var->macro-gensym* (mapcar (lambda (var)
+				      (cons var
+					    (gensym (symbol-name var))))
+				    var*)))
+    `(let ,(mapcar (lambda (var->macro-gensym)
+		     `(,(cdr var->macro-gensym)
+			(gensym
+			 ,(symbol-name (car var->macro-gensym)))))
+		   var->macro-gensym*)
+       `(let ,(list ,@(mapcar (lambda (var->macro-gensym)
+				``(,,(cdr var->macro-gensym)
+				     ,,(car var->macro-gensym)))
+			      var->macro-gensym*))
+	  ,(let ,(mapcar (lambda (var->macro-gensym)
+			   `(,(car var->macro-gensym)
+			      ,(cdr var->macro-gensym)))
+			 var->macro-gensym*)
+	     ,@body)))))
 
 ;;; ----------------------------------------------------------------------
 
