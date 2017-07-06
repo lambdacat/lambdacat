@@ -4,6 +4,11 @@
   (:use #:cl)
   (:export #:rlambda
 	   #:rlet
+	   #:aif
+	   #:awhen
+	   #:let-if
+	   #:let-when
+	   #:it
 	   #:once-only
 	   #:with-gensyms
 	   #:range
@@ -12,5 +17,7 @@
 	   #:atom*->symbol
 	   #:take
 	   #:drop
-	   #:group))
-
+	   #:group
+	   #:fold
+	   #:with-floats
+	   #:with-escape))

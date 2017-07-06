@@ -175,3 +175,46 @@
       (cons (take n ls)
 	    (group n (drop n ls)))
       nil))
+
+(defmacro with-floats (f* &body body)
+  `(let ,(mapcar (lambda (f)
+		   `(,f (float ,f)))
+		 f*)
+     ,@body))
+
+(defmacro let-if (var test then &optional (else nil))
+  (once-only (test)
+    `(if ,test
+	 (let ((,var ,test))
+	   ,then)
+	 ,else)))
+
+(defmacro let-when (var test &body body)
+  `(let-if ,var ,test
+	   (progn ,@body)))
+
+(defmacro aif (test then &optional else)
+  (once-only (test)
+    `(if ,test
+	 (let ((it ,test))
+	   ,then)
+	 ,else)))
+
+(defmacro awhen (test &body body)
+  `(aif ,test
+	(progn ,@body)
+	nil))
+
+(defmacro with-escape (esc-fn &body body)
+  (with-gensyms (block-name)
+    `(block ,block-name
+       (labels ((,esc-fn (val)
+		  (return-from ,block-name val)))
+	 ,@body))))
+
+(defun fold (fn init ls)
+  (if ls
+      (fold fn
+	    (funcall fn init (car ls))
+	    (cdr ls))
+      init))
