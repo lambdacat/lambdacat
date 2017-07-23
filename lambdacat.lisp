@@ -279,8 +279,21 @@
 	(and (funcall pred (car ls))
 	     (rec (cdr ls))))))
 
+
 (defun any (pred ls)
   (rlet rec ((ls ls))
     (and ls
 	 (or (funcall pred (car ls))
 	     (rec (cdr ls))))))
+
+(defmacro amapcar (expr ls)
+  ~(mapcar (lambda (it)
+	     (declare (ignorable it))
+	     $expr)
+	   $ls))
+
+(defmacro amapcan (expr ls)
+  ~(mapcan (lambda (it)
+	     (declare (ignorable it))
+	     $expr)
+	   $ls))
