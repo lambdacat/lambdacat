@@ -4,48 +4,91 @@
 
 ;;; "lambdacat" goes here. Hacks and glory await!
 
+(defun g!-symbol? (value)
+  (and (symbolp value)
+       (> (length (symbol-name value)) 2)
+       (string= (symbol-name value)
+		"G!"
+		:end1 2)))
+
+(defmacro defmacro/g! (name args &body body)
+  (let ((g!* (remove-duplicates
+	      (remove-if-not #'g!-symbol?
+			     (flatten body)))))
+    ~(defmacro $name $args
+       (let $(mapcar (lambda (g)
+		       ~($g (gensym $(subseq (symbol-name g) 2))))
+		     g!*)
+	 @body))))
+
+(defun o!-symbol? (value)
+  (and (symbolp value)
+       (> (length (symbol-name value)) 2)
+       (string= (symbol-name value)
+		"O!"
+		:end1 2)))
+
+(defun o!-symbol->g!-symbol (o!-sym)
+  (atom*->symbol 'g!
+		 (subseq (symbol-name o!-sym) 2)))
+
+(defmacro defmacro! (name args &body body)
+  (let* ((o!* (remove-if-not #'o!-symbol?
+			    (flatten args)))
+	 (g!* (mapcar #'o!-symbol->g!-symbol o!*)))
+    ~(defmacro/g! $name $args
+       ~(let $(mapcar #'list (list @g!*) (list @o!*))
+	  $(progn @body)))))
+
+(defmacro! and1 (o!first &rest rest)
+  ~(when (and $g!first @rest)
+     $g!first))
+
 (defmacro once-only (var* &body body)
   (let ((var->macro-gensym* (mapcar (lambda (var)
 				      (cons var
 					    (gensym (symbol-name var))))
 				    var*)))
-    `(let ,(mapcar (lambda (var->macro-gensym)
-		     `(,(cdr var->macro-gensym)
+    ~(let $(mapcar (lambda (var->macro-gensym)
+		     ~($(cdr var->macro-gensym)
 			(gensym
-			 ,(symbol-name (car var->macro-gensym)))))
+			 $(symbol-name (car var->macro-gensym)))))
 		   var->macro-gensym*)
-       `(let ,(list ,@(mapcar (lambda (var->macro-gensym)
-				``(,,(cdr var->macro-gensym)
-				     ,,(car var->macro-gensym)))
+       ~(let $(list @(mapcar (lambda (var->macro-gensym)
+				~~($$(cdr var->macro-gensym)
+				     $$(car var->macro-gensym)))
 			      var->macro-gensym*))
-	  ,(let ,(mapcar (lambda (var->macro-gensym)
-			   `(,(car var->macro-gensym)
-			      ,(cdr var->macro-gensym)))
+	  $(let $(mapcar (lambda (var->macro-gensym)
+			   ~($(car var->macro-gensym)
+			      $(cdr var->macro-gensym)))
 			 var->macro-gensym*)
-	     ,@body)))))
+	     @body)))))
 
 ;;; ----------------------------------------------------------------------
 
-;;; RLAMBDA is like LAMBDA, except that it provides a name with which to make
-;;; recursive calls.
+;;; RLAMBDA is like LAMBDA, except that it provides a name with which
+;;; to make recursive calls.
 ;;;
-;;; For example, a recursive FACTORIAL can be defined as
+;;; For example$ a recursive FACTORIAL can be defined as
 ;;;
 ;;;     (rlambda factorial (n)
 ;;;       (if (> 0 n)
 ;;;           (* n (factorial (- n 1))) 1))
 ;;;
-;;; where the identifier FACTORIAL is only bound within the body of the RLAMBDA.
+;;; where the identifier FACTORIAL is only bound within the body of
+;;; the RLAMBDA.
 (defmacro rlambda (fn-name arg* &body body)
-  `(labels ((,fn-name ,arg* ,@body))
-     #',fn-name))
+  ~(labels (($fn-name $arg* @body))
+     #'$fn-name))
 
 ;;; ----------------------------------------------------------------------
 
-;;; RLET is like LET, except that it provides a function which allows the body
-;;; of the RLET to be entered recursively with the arguments bound to new values.
+;;; RLET is like LET, except that it provides a function which allows
+;;; the body of the RLET to be entered recursively with the arguments
+;;; bound to new values.
 ;;;
-;;; For example, here is a definition of the REVERSE function which utilizes RLET
+;;; For example, here is a definition of the REVERSE function which
+;;; utilizes RLET
 ;;;
 ;;;     (defun reverse (ls)
 ;;;       (rlet rec ((result nil)
@@ -65,14 +108,14 @@
 			    (cadr bind)
 			    nil))
 		      bind*)))
-    `(funcall (rlambda ,fn-name ,arg* ,@body)
-	      ,@val*)))
+    ~(funcall (rlambda $fn-name $arg* @body)
+	      @val*)))
 
 ;;; ----------------------------------------------------------------------
 
 ;;; WITH-GENSYMS is a shorthand for binding gensyms to variable names.
 ;;;
-;;; For example, the expression
+;;; For example$ the expression
 ;;;
 ;;;     (with-gensyms (a b c)
 ;;;       (list a b c))
@@ -84,40 +127,37 @@
 ;;;           (c (gensym "c")))
 ;;;       (list a b c))
 (defmacro with-gensyms (g* &body body)
-  `(let ,(mapcar (lambda (g)
-		   `(,g (gensym ,(symbol-name g))))
+  ~(let $(mapcar (lambda (g)
+		   ~($g (gensym $(symbol-name g))))
 		 g*)
-     ,@body))
+     @body))
 
 ;;; ----------------------------------------------------------------------
 
-;;; RANGE binds an identifier given by V to the integers in the range [LO, HI),
-;;; and evaluates BODY for each.
-(defmacro range (v lo hi &body body)
-  (once-only (lo hi)
-    (with-gensyms (rec)
-      `(rlet ,rec ((,v ,lo))
-	 (if (< ,v ,hi)
-	     (progn ,@body
-		    (,rec (+ ,v 1))))))))
+;;; RANGE binds an identifier given by V to the integers in the range
+;;; [LO, HI), and evaluates BODY for each.
+(defmacro! range (v o!lo o!hi &body body)
+  ~(rlet $g!rec (($v $g!lo))
+     (if (< $v $g!hi)
+	 (progn @body
+		($g!rec (+ $v 1))))))
 
 ;;; ----------------------------------------------------------------------
 
-;;; COLLECT-RANGE is like RANGE, except that the value of BODY for each integer
-;;; is collected in a list.
-(defmacro collect-range (v lo hi &body body)
-  (with-gensyms (result)
-    `(let (,result)
-       (range ,v ,lo ,hi
-	      (push (progn ,@body) ,result))
-       (nreverse ,result))))
+;;; COLLECT-RANGE is like RANGE$ except that the value of BODY for
+;;; each integer is collected in a list.
+(defmacro! collect-range (v lo hi &body body)
+  ~(let ($g!result)
+     (range $v $lo $hi
+       (push (progn @body) $g!result))
+     (nreverse $g!result)))
 
 ;;; ----------------------------------------------------------------------
 
-;;; INDEXED-MAP is like mapcar, except that it passes the zero-based index of
-;;; the list element as a second argument to FN.
+;;; INDEXED-MAP is like mapcar$ except that it passes the zero-based
+;;; index of the list element as a second argument to FN.
 ;;;
-;;; For example, the expression
+;;; For example$ the expression
 ;;;
 ;;;     (indexed-map #'cons '(a b c d e f))
 ;;;
@@ -134,7 +174,7 @@
 ;;; ----------------------------------------------------------------------
 
 ;;; Concatenate the printed representation of each atom in ATOM* into a
-;;; a string, and intern it as a symbol.
+;;; a string$ and intern it as a symbol.
 (defun atom*->symbol (&rest atom*)
   (values
    (intern
@@ -177,41 +217,39 @@
       nil))
 
 (defmacro with-floats (f* &body body)
-  `(let ,(mapcar (lambda (f)
-		   `(,f (float ,f)))
+  ~(let $(mapcar (lambda (f)
+		   ~($f (float $f)))
 		 f*)
-     ,@body))
+     @body))
 
-(defmacro let-if (var test then &body else)
-  (once-only (test)
-    (assert (< (length else) 2) (else) "Else clause must have 0 or 1 expression")
-    `(if ,test
-	 (let ((,var ,test))
-	   ,then)
-	 ,@else)))
+(defmacro! let-if (var o!test then &body else)
+  (assert (< (length else) 2) (else)
+	  "Else clause must have 0 or 1 expression")
+  ~(if $g!test
+       (let (($var $g!test))
+	 $then)
+       @else))
 
 (defmacro let-when (var test &body body)
-  `(let-if ,var ,test
-	   (progn ,@body)))
+  ~(let-if $var $test
+	   (progn @body)))
 
-(defmacro aif (test then &optional else)
-  (once-only (test)
-    `(if ,test
-	 (let ((it ,test))
-	   ,then)
-	 ,else)))
+(defmacro! aif (o!test then &optional else)
+  ~(if $g!test
+       (let ((it $g!test))
+	 $then)
+       $else))
 
 (defmacro awhen (test &body body)
-  `(aif ,test
-	(progn ,@body)
+  ~(aif $test
+	(progn @body)
 	nil))
 
-(defmacro with-escape (esc-fn &body body)
-  (with-gensyms (block-name)
-    `(block ,block-name
-       (labels ((,esc-fn (val)
-		  (return-from ,block-name val)))
-	 ,@body))))
+(defmacro! with-escape (esc-fn &body body)
+  ~(block $g!block-name
+     (labels (($esc-fn (val)
+		(return-from $g!block-name val)))
+       @body)))
 
 (defun fold (fn init ls)
   (if ls
@@ -234,11 +272,6 @@
 	   (eq (cdr old) cdr))
       old
       (cons car cdr)))
-
-(defmacro and1 (first &rest rest)
-  (once-only (first)
-    `(when (and ,first ,@rest)
-       ,first)))
 
 (defun all (pred ls)
   (rlet rec ((ls ls))

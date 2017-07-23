@@ -6,5 +6,5 @@
   :license "Specify license here"
   :serial t
   :components ((:file "package")
-               (:file "lambdacat")))
-
+	       (:file "semiliteral")
+	       (:file "lambdacat")))
