@@ -19,5 +19,10 @@
 	   #:drop
 	   #:group
 	   #:fold
+	   #:flatten
 	   #:with-floats
-	   #:with-escape))
+	   #:with-escape
+	   #:cons-new
+	   #:and1
+	   #:all
+	   #:any))

@@ -182,12 +182,13 @@
 		 f*)
      ,@body))
 
-(defmacro let-if (var test then &optional (else nil))
+(defmacro let-if (var test then &body else)
   (once-only (test)
+    (assert (< (length else) 2) (else) "Else clause must have 0 or 1 expression")
     `(if ,test
 	 (let ((,var ,test))
 	   ,then)
-	 ,else)))
+	 ,@else)))
 
 (defmacro let-when (var test &body body)
   `(let-if ,var ,test
@@ -218,3 +219,35 @@
 	    (funcall fn init (car ls))
 	    (cdr ls))
       init))
+
+(defun flatten (tree)
+  (nreverse
+   (rlet rec (rev-atoms 
+	      (tree tree))
+     (cond ((consp tree) (rec (rec rev-atoms (car tree))
+			      (cdr tree)))
+	   ((null tree) rev-atoms)
+	   (t (cons tree rev-atoms))))))
+
+(defun cons-new (old car cdr)
+  (if (and (eq (car old) car)
+	   (eq (cdr old) cdr))
+      old
+      (cons car cdr)))
+
+(defmacro and1 (first &rest rest)
+  (once-only (first)
+    `(when (and ,first ,@rest)
+       ,first)))
+
+(defun all (pred ls)
+  (rlet rec ((ls ls))
+    (or (null ls)
+	(and (funcall pred (car ls))
+	     (rec (cdr ls))))))
+
+(defun any (pred ls)
+  (rlet rec ((ls ls))
+    (and ls
+	 (or (funcall pred (car ls))
+	     (rec (cdr ls))))))
